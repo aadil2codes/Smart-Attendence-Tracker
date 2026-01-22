@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>📚 Attendance Tracker</h1>
+
+  <!-- ================= HOME / LANDING ================= -->
+  <div id="subject-screen">
+    <div class="add-subject">
+      <input type="text" id="newSubjectInput" placeholder="Enter subject name">
+      <button onclick="addSubject()">Add Subject</button>
+    </div>
+
+    <h2>Your Subjects</h2>
+    <div id="subjectList"></div>
+  </div>
+
+  <!-- ================= SUBJECT / CALENDAR ================= -->
+  <div id="calendar-screen" class="hidden">
+    <button onclick="goBack()">⬅ Back</button>
+    <h2 id="currentSubjectTitle"></h2>
+
+    <div id="stats">
+      Attended: <span id="attendedCount">0</span> |
+      Total: <span id="totalCount">0</span> |
+      Percentage: <span id="percentage">0%</span>
+    </div>
+
+    <!-- ✅ ONLY ONE MONTH NAVIGATION -->
+    <div id="monthControls">
+      <button onclick="prevMonth()">◀</button>
+      <span id="monthHeader"></span>
+      <button onclick="nextMonth()">▶</button>
+    </div>
+
+    <div id="calendar"></div>
+  </div>
+
+  <!-- ================= STATUS POPUP ================= -->
+  <div id="statusModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Select Status</h3>
+      <button class="btn present-btn" onclick="setStatus('present')">✅ Present</button>
+      <button class="btn absent-btn" onclick="setStatus('absent')">❌ Absent</button>
+      <button class="btn noclass-btn" onclick="setStatus('noclass')">🟦 No Class / Govt Leave</button>
+      <button class="btn clear-btn" onclick="setStatus('clear')">⭕ Clear</button>
+      <br><br>
+      <button class="btn cancel-btn" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
