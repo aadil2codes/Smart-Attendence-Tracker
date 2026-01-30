@@ -1,7 +1,9 @@
+/***********************
+  DATA & GLOBAL STATE
+************************/
 let data = JSON.parse(localStorage.getItem("attendanceData")) || { subjects: {} };
 let currentSubject = null;
 let selectedDate = null;
-
 let currentYear = null;
 let currentMonth = null;
 
@@ -11,111 +13,160 @@ const subjectListDiv = document.getElementById("subjectList");
 const calendarDiv = document.getElementById("calendar");
 const modal = document.getElementById("statusModal");
 
+/***********************
+  HELPERS
+************************/
 function saveData() {
   localStorage.setItem("attendanceData", JSON.stringify(data));
 }
 
-// ================= SUBJECTS =================
+// ✅ LOCAL DATE STRING (NO UTC BUG)
+function getLocalDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
-function addSubject() {
+function normalizeSubjects() {
+  for (let subject in data.subjects) {
+    const s = data.subjects[subject];
+
+    // Old format detected
+    if (!s.records) {
+      data.subjects[subject] = {
+        type: "regular",
+        weeklyDay: null,
+        records: { ...s }
+      };
+    }
+  }
+}
+
+/***********************
+  ADD SUBJECT (MODAL)
+************************/
+let newSubjectType = null;
+let newSubjectWeeklyDay = null;
+
+function openAddSubjectModal() {
+  document.getElementById("addSubjectModal").classList.remove("hidden");
+  document.getElementById("weeklyDaySelector").classList.add("hidden");
+  newSubjectType = null;
+  newSubjectWeeklyDay = null;
+}
+
+function closeAddSubjectModal() {
+  document.getElementById("addSubjectModal").classList.add("hidden");
+}
+
+function selectSubjectType(type) {
+  newSubjectType = type;
+  if (type === "weekly") {
+    document.getElementById("weeklyDaySelector").classList.remove("hidden");
+  } else {
+    createSubject();
+  }
+}
+
+function selectWeeklyDay(day) {
+  newSubjectWeeklyDay = day;
+  createSubject();
+}
+
+function createSubject() {
   const input = document.getElementById("newSubjectInput");
   const name = input.value.trim();
 
   if (!name) {
-    alert("Enter subject name");
+    alert("Enter subject name first");
     return;
   }
-
   if (data.subjects[name]) {
     alert("Subject already exists");
     return;
   }
 
-  data.subjects[name] = {};
+  data.subjects[name] = {
+    type: newSubjectType,
+    weeklyDay: newSubjectType === "weekly" ? newSubjectWeeklyDay : null,
+    records: {}
+  };
+
   saveData();
   input.value = "";
+  closeAddSubjectModal();
   renderSubjects();
 }
 
+/***********************
+  DASHBOARD
+************************/
 function calculateSubjectStats(subjectName) {
-  const records = data.subjects[subjectName];
+  const records = data.subjects[subjectName].records;
+  let attended = 0, total = 0;
 
-  let attended = 0;
-  let total = 0;
-
-  for (let date in records) {
-    if (records[date] === "present") {
-      attended++;
-      total++;
-    } else if (records[date] === "absent") {
+  for (let d in records) {
+    if (records[d] === "present") {
+      attended++; total++;
+    } else if (records[d] === "absent") {
       total++;
     }
   }
 
-  let percent = total === 0 ? 0 : (attended / total) * 100;
-  return { attended, total, percent };
+  return {
+    attended,
+    total,
+    percent: total === 0 ? 0 : (attended / total) * 100
+  };
 }
 
 function renderSubjects() {
   subjectListDiv.innerHTML = "";
-
   const subjects = Object.keys(data.subjects);
 
-  if (subjects.length === 0) {
+  if (!subjects.length) {
     subjectListDiv.innerHTML = "<p>No subjects added.</p>";
     return;
   }
 
   subjects.forEach(sub => {
     const stats = calculateSubjectStats(sub);
-
     const div = document.createElement("div");
     div.className = "subject-item";
 
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "subject-name";
-    nameSpan.textContent = sub;
+    div.innerHTML = `
+      <span class="subject-name">${sub}</span>
+      <span class="subject-percent">${stats.percent.toFixed(1)}%</span>
+    `;
 
-    const percentSpan = document.createElement("span");
-    percentSpan.className = "subject-percent";
-
-    let percentText = stats.total === 0 ? "0%" : stats.percent.toFixed(1) + "%";
-    percentSpan.textContent = percentText;
-
-    if (stats.percent >= 80) {
-      percentSpan.classList.add("percent-very-safe");
-    } else if (stats.percent >= 75) {
-      percentSpan.classList.add("percent-safe");
-    } else if (stats.percent >= 65) {
-      percentSpan.classList.add("percent-warning");
-    } else {
-      percentSpan.classList.add("percent-danger");
-    }
-
-    div.appendChild(nameSpan);
-    div.appendChild(percentSpan);
+    const p = div.querySelector(".subject-percent");
+    if (stats.percent >= 80) p.classList.add("percent-very-safe");
+    else if (stats.percent >= 75) p.classList.add("percent-safe");
+    else if (stats.percent >= 65) p.classList.add("percent-warning");
+    else p.classList.add("percent-danger");
 
     div.onclick = () => openSubject(sub);
-
     subjectListDiv.appendChild(div);
   });
 }
 
-// ================= SUBJECT VIEW =================
-
+/***********************
+  SUBJECT VIEW
+************************/
 function openSubject(name) {
   const now = new Date();
   currentYear = now.getFullYear();
   currentMonth = now.getMonth();
-
   currentSubject = name;
+
   subjectScreen.classList.add("hidden");
   calendarScreen.classList.remove("hidden");
-
   document.getElementById("currentSubjectTitle").textContent = name;
 
   renderCalendar();
   updateStats();
+  checkTodayReminder(); // 🔔 AI check
 }
 
 function goBack() {
@@ -125,85 +176,69 @@ function goBack() {
   renderSubjects();
 }
 
-// ================= CALENDAR =================
-
+/***********************
+  CALENDAR
+************************/
 function renderCalendar() {
   calendarDiv.innerHTML = "";
 
   const now = new Date();
-  const todayYear = now.getFullYear();
-  const todayMonth = now.getMonth();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth();
+  const todayD = now.getDate();
 
-  // Block future month
-  if (
-    currentYear > todayYear ||
-    (currentYear === todayYear && currentMonth > todayMonth)
-  ) {
-    currentYear = todayYear;
-    currentMonth = todayMonth;
-  }
+  document.getElementById("monthHeader").textContent =
+    new Date(currentYear, currentMonth).toLocaleString("default", { month: "long", year: "numeric" });
 
-  const monthName = new Date(currentYear, currentMonth).toLocaleString("default", {
-    month: "long",
-    year: "numeric",
-  });
-  document.getElementById("monthHeader").textContent = monthName;
-
-  // Handle next button
-  const nextBtn = document.querySelector("#monthControls button:last-child");
-  if (
-    currentYear === todayYear &&
-    currentMonth === todayMonth
-  ) {
-    nextBtn.disabled = true;
-    nextBtn.style.opacity = "0.5";
-  } else {
-    nextBtn.disabled = false;
-    nextBtn.style.opacity = "1";
-  }
-
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const offset = (firstDay + 6) % 7;
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(currentYear, currentMonth, day);
-    const dayOfWeek = date.getDay();
-    const dateStr = date.toISOString().split("T")[0];
+  for (let i = 0; i < offset; i++) {
+    calendarDiv.appendChild(document.createElement("div"));
+  }
 
+  const subject = data.subjects[currentSubject];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(currentYear, currentMonth, d);
+    const day = date.getDay();
+    const dateStr = getLocalDateString(date);
     const div = document.createElement("div");
     div.className = "day";
-    div.textContent = day;
+    div.textContent = d;
 
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    if (day === 0 || day === 6) {
       div.classList.add("weekend");
+      calendarDiv.appendChild(div);
+      continue;
+    }
+
+    if (subject.type === "weekly" && day !== subject.weeklyDay) {
+      div.style.opacity = "0.3";
+      calendarDiv.appendChild(div);
+      continue;
+    }
+
+    const status = subject.records[dateStr];
+    if (status) div.classList.add(status);
+
+    if (currentYear === todayY && currentMonth === todayM && d > todayD) {
+      div.style.opacity = "0.4";
     } else {
-      const status = data.subjects[currentSubject][dateStr];
-
-      if (status === "present") div.classList.add("present");
-      if (status === "absent") div.classList.add("absent");
-      if (status === "noclass") div.classList.add("noclass");
-
-      // Disable future dates
-      if (
-        currentYear === todayYear &&
-        currentMonth === todayMonth &&
-        day > now.getDate()
-      ) {
-        div.style.opacity = "0.4";
-        div.style.pointerEvents = "none";
-      } else {
-        div.onclick = () => {
-          selectedDate = dateStr;
-          openModal();
-        };
-      }
+      div.onclick = () => {
+        selectedDate = dateStr;
+        openModal();
+      };
     }
 
     calendarDiv.appendChild(div);
   }
 }
 
-// ================= MONTH NAV =================
-
+/***********************
+  MONTH NAV
+************************/
 function prevMonth() {
   currentMonth--;
   if (currentMonth < 0) {
@@ -215,25 +250,19 @@ function prevMonth() {
 
 function nextMonth() {
   const now = new Date();
-
-  if (
-    currentYear === now.getFullYear() &&
-    currentMonth === now.getMonth()
-  ) {
-    return;
-  }
+  if (currentYear === now.getFullYear() && currentMonth === now.getMonth()) return;
 
   currentMonth++;
   if (currentMonth > 11) {
     currentMonth = 0;
     currentYear++;
   }
-
   renderCalendar();
 }
 
-// ================= MODAL =================
-
+/***********************
+  MODAL & STATUS
+************************/
 function openModal() {
   modal.classList.remove("hidden");
 }
@@ -244,45 +273,80 @@ function closeModal() {
 }
 
 function setStatus(status) {
-  if (!selectedDate) return;
+  const records = data.subjects[currentSubject].records;
 
-  if (status === "clear") {
-    delete data.subjects[currentSubject][selectedDate];
-  } else {
-    data.subjects[currentSubject][selectedDate] = status;
-  }
+  if (status === "clear") delete records[selectedDate];
+  else records[selectedDate] = status;
 
   saveData();
   closeModal();
   renderCalendar();
   updateStats();
   renderSubjects();
-}
 
-// ================= STATS =================
-
-function updateStats() {
-  const records = data.subjects[currentSubject];
-
-  let attended = 0;
-  let total = 0;
-
-  for (let date in records) {
-    if (records[date] === "present") {
-      attended++;
-      total++;
-    } else if (records[date] === "absent") {
-      total++;
-    }
+  // ✅ CLEAR REMINDER ONLY IF TODAY WAS MARKED
+  const todayStr = getLocalDateString();
+  if (selectedDate === todayStr) {
+    document.getElementById("reminderBanner").classList.add("hidden");
   }
 
-  let percent = total === 0 ? 0 : ((attended / total) * 100).toFixed(2);
+  checkTodayReminder();
 
-  document.getElementById("attendedCount").textContent = attended;
-  document.getElementById("totalCount").textContent = total;
-  document.getElementById("percentage").textContent = percent + "%";
 }
 
-// ================= INIT =================
+/***********************
+  STATS
+************************/
+function updateStats() {
+  const r = data.subjects[currentSubject].records;
+  let a = 0, t = 0;
 
+  for (let d in r) {
+    if (r[d] === "present") { a++; t++; }
+    else if (r[d] === "absent") t++;
+  }
+
+  document.getElementById("attendedCount").textContent = a;
+  document.getElementById("totalCount").textContent = t;
+  document.getElementById("percentage").textContent =
+    t === 0 ? "0%" : ((a / t) * 100).toFixed(2) + "%";
+}
+
+/***********************
+  AI REMINDER (FINAL)
+************************/
+function checkTodayReminder() {
+  const banner = document.getElementById("reminderBanner");
+  if (!banner) return;
+
+  banner.classList.add("hidden");
+
+  if (!currentSubject) return;
+
+  const subject = data.subjects[currentSubject];
+  const now = new Date();
+
+  const todayStr = getLocalDateString(now);
+  const day = now.getDay(); // 0 = Sunday
+  const hour = now.getHours(); // 0–23
+
+  // ❌ Before 6 PM → no reminder
+  if (hour < 18) return;
+
+  // ❌ Sunday → no reminder
+  if (day === 0) return;
+
+  // ❌ Weekly subject but today is not class day
+  if (subject.type === "weekly" && day !== subject.weeklyDay) return;
+
+  // ❌ Already marked today
+  if (subject.records[todayStr]) return;
+
+  // ✅ SHOW REMINDER (after 6 PM only)
+  banner.classList.remove("hidden");
+}
+
+
+normalizeSubjects();
+saveData();      // persist upgraded data
 renderSubjects();
