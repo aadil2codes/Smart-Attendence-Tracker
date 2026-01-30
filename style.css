@@ -268,3 +268,168 @@ h2 {
   border-radius: 6px;
   cursor: pointer;
 }
+
+
+/* RESPONSIVE */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 10px 0;
+}
+
+.add-subject {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-subject input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+}
+
+.add-subject button {
+  padding: 10px 14px;
+  font-size: 15px;
+  border-radius: 8px;
+}
+
+.subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.subject-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.subject-percent {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.day {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.weekend {
+  background: #e2e8f0;
+}
+
+.present {
+  background: #22c55e;
+  color: white;
+}
+
+.absent {
+  background: #ef4444;
+  color: white;
+}
+
+.noclass {
+  background: #94a3b8;
+  color: white;
+}
+
+#weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 6px;
+  color: #475569;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: #2563eb;
+  color: white;
+}
+
+.btn {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 360px;
+}
+
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .subject-item {
+    padding: 12px;
+  }
+
+  .day {
+    font-size: 13px;
+  }
+
+  #stats {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+}
+
+
+/* Desktop layout fix */
+@media (min-width: 768px) {
+  #subject-screen {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  #calendar-screen {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+}
