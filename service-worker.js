@@ -1,40 +1,27 @@
-const CACHE_NAME = "attendance-tracker-v1";
-
-const FILES_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./app.js",
-  "./manifest.json"
-];
-
-// Install
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(FILES_TO_CACHE);
-    })
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-// Activate
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k => k !== CACHE_NAME)).map(k => caches.delete(k))
-      )
-    )
-  );
+self.addEventListener("activate", () => {
   self.clients.claim();
 });
 
-// Fetch
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
-    })
-  );
+// 🔔 Background notification logic
+self.addEventListener("sync", async (event) => {
+  if (event.tag === "attendance-reminder") {
+    event.waitUntil(showReminder());
+  }
 });
+
+async function showReminder() {
+  const clients = await self.clients.matchAll({ type: "window" });
+
+  // If app is already open, don't notify
+  if (clients.length > 0) return;
+
+  self.registration.showNotification("Attendance Reminder", {
+    body: "It’s after 6 PM. Don’t forget to mark today’s attendance.",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+  });
+}
