@@ -13,6 +13,11 @@ const subjectListDiv = document.getElementById("subjectList");
 const calendarDiv = document.getElementById("calendar");
 const modal = document.getElementById("statusModal");
 
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
+}
+
+
 /***********************
   HELPERS
 ************************/
@@ -344,9 +349,24 @@ function checkTodayReminder() {
 
   // ✅ SHOW REMINDER (after 6 PM only)
   banner.classList.remove("hidden");
+
+  // Register background reminder
+registerBackgroundReminder();
+
 }
 
 
 normalizeSubjects();
 saveData();      // persist upgraded data
 renderSubjects();
+
+async function registerBackgroundReminder() {
+  if (!("serviceWorker" in navigator) || !("SyncManager" in window)) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  try {
+    await registration.sync.register("attendance-reminder");
+  } catch (e) {
+    console.log("Background sync not supported");
+  }
+}
