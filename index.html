@@ -2,18 +2,31 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Attendance Tracker</title>
+  <title>Smart Attendance Tracker</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+
 </head>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js");
+    });
+  }
+</script>
+
 <body>
 
-  <h1>📚 Attendance Tracker</h1>
+  <h1>📚Smart Attendance Tracker</h1>
 
   <!-- ================= HOME / LANDING ================= -->
   <div id="subject-screen">
     <div class="add-subject">
       <input type="text" id="newSubjectInput" placeholder="Enter subject name">
-      <button onclick="addSubject()">Add Subject</button>
+    <button onclick="openAddSubjectModal()">Add Subject</button>
+
     </div>
 
     <h2>Your Subjects</h2>
@@ -22,8 +35,25 @@
 
   <!-- ================= SUBJECT / CALENDAR ================= -->
   <div id="calendar-screen" class="hidden">
-    <button onclick="goBack()">⬅ Back</button>
-    <h2 id="currentSubjectTitle"></h2>
+
+    <div id="reminderBanner" class="hidden" style="
+  background:#fef3c7;
+  padding:10px;
+  border-radius:8px;
+  margin:10px 0;
+  color:#92400e;
+  font-weight:500;
+">
+  🔔 You haven’t marked attendance for today.
+</div>
+
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+  <button onclick="goBack()">⬅ Back</button>
+  <button class="delete-btn" onclick="openDeleteSubjectModal()">🗑 Delete</button>
+</div>
+
+<h2 id="currentSubjectTitle"></h2>
 
     <div id="stats">
       Attended: <span id="attendedCount">0</span> |
@@ -38,7 +68,20 @@
       <button onclick="nextMonth()">▶</button>
     </div>
 
-    <div id="calendar"></div>
+    <div id="calendar-container">
+  <div id="weekdays">
+    <div>Mon</div>
+    <div>Tue</div>
+    <div>Wed</div>
+    <div>Thu</div>
+    <div>Fri</div>
+    <div>Sat</div>
+    <div>Sun</div>
+  </div>
+
+  <div id="calendar"></div>
+</div>
+
   </div>
 
   <!-- ================= STATUS POPUP ================= -->
@@ -53,6 +96,47 @@
       <button class="btn cancel-btn" onclick="closeModal()">Cancel</button>
     </div>
   </div>
+
+  <!-- Add Subject Modal -->
+<div id="addSubjectModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Add Subject</h3>
+
+    
+
+    <p>Select Subject Type:</p>
+    <button class="btn" onclick="selectSubjectType('regular')">✅ Regular</button>
+    <button class="btn" onclick="selectSubjectType('weekly')">📅 Once in a Week</button>
+
+    <div id="weeklyDaySelector" class="hidden">
+      <p>Select Day:</p>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:5px;">
+        <button class="btn" onclick="selectWeeklyDay(1)">Mon</button>
+        <button class="btn" onclick="selectWeeklyDay(2)">Tue</button>
+        <button class="btn" onclick="selectWeeklyDay(3)">Wed</button>
+        <button class="btn" onclick="selectWeeklyDay(4)">Thu</button>
+        <button class="btn" onclick="selectWeeklyDay(5)">Fri</button>
+        <button class="btn" onclick="selectWeeklyDay(6)">Sat</button>
+        <button class="btn" onclick="selectWeeklyDay(0)">Sun</button>
+      </div>
+    </div>
+
+    <br>
+    <button class="btn cancel-btn" onclick="closeAddSubjectModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Delete Subject Modal -->
+<div id="deleteSubjectModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Delete Subject?</h3>
+    <p>This will remove all attendance data for this subject.</p>
+
+    <button class="btn absent-btn" onclick="deleteSubject()">Yes, Delete</button>
+    <button class="btn cancel-btn" onclick="closeDeleteSubjectModal()">Cancel</button>
+  </div>
+</div>
+
 
   <script src="app.js"></script>
 </body>
